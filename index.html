@@ -15,47 +15,39 @@
             <i class="fa-solid fa-gamepad"></i> GnomeMaps
         </div>
         <div class="nav-controls">
-            <input type="text" id="searchInput" placeholder="Search maps by name..." oninput="filterMaps()">
+            <!-- Исправлен авто-ввод почты браузером (type="search" и autocomplete="off") -->
+            <input type="search" id="searchInput" name="no-autofill-search" autocomplete="off" placeholder="Search maps by name..." oninput="filterMaps()">
             <select id="sortSelect" onchange="loadMaps()">
                 <option value="newest">Newest First</option>
                 <option value="downloads">Most Downloaded</option>
                 <option value="likes">Most Liked</option>
             </select>
-            <!-- Modes will be loaded dynamically here -->
+            <!-- Статичные режимы, никаких лишних модов -->
             <select id="modeSelect" onchange="loadMaps()">
                 <option value="all">All Modes</option>
+                <option value="Sandbox">Sandbox</option>
+                <option value="Race">Race</option>
             </select>
         </div>
         <div class="nav-user">
+            <!-- Начальное состояние скрыто, чтобы не моргали кнопки до ответа от Firebase -->
             <div id="user-info" style="display: none;">
                 <span id="user-greeting">Hello, Player!</span>
                 <button class="btn btn-success" onclick="openUploadModal()"><i class="fa-solid fa-upload"></i> Upload Map</button>
                 <button class="btn btn-danger" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
-            <div id="auth-buttons">
+            <div id="auth-buttons" style="display: none;">
                 <button class="btn btn-outline" onclick="openAuthModal('login')">Login</button>
                 <button class="btn btn-primary" onclick="openAuthModal('register')">Register</button>
             </div>
         </div>
     </nav>
 
-    <!-- Admin Panel -->
-    <div id="admin-panel" class="admin-banner" style="display: none;">
-        <div><i class="fa-solid fa-crown"></i> <b>Administrator Panel Active.</b> You have full moderation rights.</div>
-        
-        <!-- Управление режимами -->
-        <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px; align-items: center;">
-            <input type="text" id="new-mode-input" placeholder="New Game Mode Name" style="padding: 5px; border-radius: 3px; border: none;">
-            <button class="btn btn-success" style="padding: 5px 15px;" onclick="addGameMode()">Add Mode</button>
-            <button class="btn btn-danger" style="padding: 5px 15px;" onclick="removeGameMode()">Remove Mode</button>
-        </div>
-    </div>
-
-    <!-- Hero Banner (Makes the site look full and professional) -->
+    <!-- Hero Banner -->
     <header class="hero">
         <div class="hero-content">
             <h1>Welcome to the Custom Workshop</h1>
-            <p>Discover, download, and share amazing community-created maps and game modes.</p>
+            <p>Discover, download, and share amazing community-created maps for your favorite game modes.</p>
         </div>
     </header>
 
@@ -65,7 +57,6 @@
             <!-- Maps will be loaded here -->
         </div>
         
-        <!-- Empty State (When search yields no results) -->
         <div id="empty-state" class="empty-state" style="display: none;">
             <i class="fa-solid fa-magnifying-glass"></i>
             <h3>No maps found</h3>
@@ -97,8 +88,10 @@
             <textarea id="map-desc" placeholder="Map Description..."></textarea>
             
             <label>Target Game Mode:</label>
-            <!-- Modes will be loaded dynamically here -->
-            <select id="map-mode"></select>
+            <select id="map-mode">
+                <option value="Sandbox">Sandbox</option>
+                <option value="Race">Race</option>
+            </select>
             
             <label>Map File (.txt):</label>
             <input type="file" id="map-file" accept=".txt">
