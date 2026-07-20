@@ -121,29 +121,47 @@ async function loadMaps() {
     }
 }
 
+// Функция для защиты от хакерского кода (XSS)
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag])
+    );
+}
+
 function createMapCard(map) {
     const div = document.createElement('div');
     div.className = 'map-card';
     
-    // Если картинки нет, ставим заглушку
     const imgUrl = map.ImageBase64 || 'https://via.placeholder.com/300x180?text=Нет+Изображения';
     const canDelete = currentUserData && (currentUserData.role === 'admin' || currentUserData.username === map.Author);
     const likedPlayers = map.LikedPlayers || [];
     const hasLiked = currentUserData && likedPlayers.includes(currentUserData.uid);
     const likeColor = hasLiked ? 'var(--danger)' : 'white';
 
+    // Очищаем вводимые пользователем данные от опасных скриптов!
+    const safeName = escapeHTML(map.Name);
+    const safeAuthor = escapeHTML(map.Author);
+    const safeDesc = escapeHTML(map.Description);
+
     div.innerHTML = `
         <img src="${imgUrl}" class="map-img" alt="Map">
         <div class="map-info">
-            <h3 class="map-title">${map.Name} <span style="font-size:12px;color:gray">v${map.Version || '1.0'}</span></h3>
-            <p class="map-author"><i class="fa-solid fa-user"></i> ${map.Author} | <i class="fa-solid fa-gamepad"></i> ${map.TargetMode}</p>
-            <p class="map-desc">${map.Description || 'Без описания.'}</p>
+            <h3 class="map-title">${safeName} <span style="font-size:12px;color:gray">v${map.Version || '1.0'}</span></h3>
+            <p class="map-author"><i class="fa-solid fa-user"></i> ${safeAuthor} | <i class="fa-solid fa-gamepad"></i> ${map.TargetMode}</p>
+            <p class="map-desc">${safeDesc || 'Без описания.'}</p>
             <div class="map-stats">
                 <span><i class="fa-solid fa-heart"></i> ${map.Likes || 0}</span>
                 <span><i class="fa-solid fa-download"></i> ${map.Downloads || 0}</span>
             </div>
             <div class="map-actions">
-                <button class="btn btn-primary" onclick="downloadMap('${map.id}', '${map.Name}')"><i class="fa-solid fa-download"></i> Скачать</button>
+                <button class="btn btn-primary" onclick="downloadMap('${map.id}', '${safeName}')"><i class="fa-solid fa-download"></i> Скачать</button>
                 <button class="btn btn-outline" style="color:${likeColor}; border-color:${likeColor}" onclick="likeMap('${map.id}')">
                     <i class="fa-solid fa-heart"></i>
                 </button>
