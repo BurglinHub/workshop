@@ -2,50 +2,95 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Мастерская Модов</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GnomeMaps | Мастерская Модов</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Иконки -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Мастерская Модов 🎮</h1>
 
-    <!-- Меню Входа и Регистрации -->
-    <div id="auth-section" class="box">
-        <h2>Вход в систему</h2>
-        <input type="text" id="username" placeholder="Твой Никнейм (только для регистрации)">
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Пароль">
-        <button onclick="login()">Войти</button>
-        <button onclick="register()" class="btn-reg">Регистрация</button>
-    </div>
-
-    <!-- Основной сайт (покажется только после входа) -->
-    <div id="main-content" style="display: none;">
-        <div class="user-panel box">
-            <h3 id="user-greeting">Привет!</h3>
-            <button onclick="logout()" class="btn-logout">Выйти</button>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="nav-logo">
+            <i class="fa-solid fa-gamepad"></i> GnomeMaps
         </div>
-
-        <!-- Секретная панель Админа -->
-        <div id="admin-panel" class="box admin-box" style="display: none;">
-            <h3>👑 Панель Администратора (Antropomeda)</h3>
-            <p>У тебя есть права на управление базой (защита базы настроена, другие игроки ничего не удалят).</p>
+        <div class="nav-controls">
+            <input type="text" id="searchInput" placeholder="Поиск карт..." oninput="filterMaps()">
+            <select id="sortSelect" onchange="loadMaps()">
+                <option value="newest">Сначала новые</option>
+                <option value="downloads">По скачиваниям</option>
+                <option value="likes">По лайкам</option>
+            </select>
+            <select id="modeSelect" onchange="loadMaps()">
+                <option value="all">Все режимы</option>
+                <option value="Sandbox">Sandbox</option>
+                <option value="Race">Race</option>
+            </select>
         </div>
-
-        <!-- Твой мод -->
-        <div class="mod-card box">
-            <img src="logo.png" alt="Логотип мода" onclick="toggleModMenu()">
-            <div id="mod-menu" style="display: none;">
-                <h3>Название твоего мода</h3>
-                <p>Автор: Antropomeda</p>
-                <button>Скачать мод</button>
+        <div class="nav-user">
+            <div id="user-info" style="display: none;">
+                <span id="user-greeting">Привет, Игрок!</span>
+                <button class="btn btn-primary" onclick="openUploadModal()">Загрузить карту</button>
+                <button class="btn btn-danger" onclick="logout()">Выйти</button>
+            </div>
+            <div id="auth-buttons">
+                <button class="btn btn-outline" onclick="openAuthModal('login')">Вход</button>
+                <button class="btn btn-primary" onclick="openAuthModal('register')">Регистрация</button>
             </div>
         </div>
+    </nav>
+
+    <!-- Секция Админа -->
+    <div id="admin-panel" class="admin-banner" style="display: none;">
+        <i class="fa-solid fa-crown"></i> Панель Администратора (Antropomeda) активирована. Вы можете удалять любые карты.
     </div>
 
-    <!-- Скрипты Firebase (Не трогать) -->
+    <!-- Основной контент (Сетка карт) -->
+    <main class="container">
+        <div id="maps-grid" class="map-grid">
+            <!-- Карты будут загружаться сюда через JS -->
+        </div>
+        <div id="loading-spinner" class="loading">Загрузка базы данных... <i class="fa-solid fa-spinner fa-spin"></i></div>
+    </main>
+
+    <!-- Модальное окно Входа/Регистрации -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('auth-modal')">&times;</span>
+            <h2 id="auth-title">Вход</h2>
+            <input type="text" id="username" placeholder="Твой Никнейм (только для регистрации)" style="display: none;">
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Пароль">
+            <button id="auth-action-btn" class="btn btn-primary full-width" onclick="login()">Войти</button>
+            <p class="auth-switch" id="auth-switch-text" onclick="toggleAuthMode()">Нет аккаунта? Зарегистрироваться</p>
+        </div>
+    </div>
+
+    <!-- Модальное окно Загрузки карты (Upload) -->
+    <div id="upload-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('upload-modal')">&times;</span>
+            <h2>Загрузить новую карту</h2>
+            <input type="text" id="map-name" placeholder="Название карты (без пробелов)">
+            <textarea id="map-desc" placeholder="Описание карты..."></textarea>
+            <select id="map-mode">
+                <option value="Sandbox">Sandbox</option>
+                <option value="Race">Race</option>
+            </select>
+            <label>Файл карты (.txt):</label>
+            <input type="file" id="map-file" accept=".txt">
+            <label>Превью (.png):</label>
+            <input type="file" id="map-img" accept="image/png, image/jpeg">
+            <button id="upload-btn" class="btn btn-success full-width" onclick="uploadMap()">Опубликовать</button>
+        </div>
+    </div>
+
+    <!-- Скрипты Firebase (Используем v8, добавляем Storage для файлов) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
