@@ -1,92 +1,108 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GnomeMaps | Мастерская Модов</title>
+    <title>GnomeMaps | Workshop</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Иконки -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
 
-    <!-- Навигация -->
+    <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-logo">
             <i class="fa-solid fa-gamepad"></i> GnomeMaps
         </div>
         <div class="nav-controls">
-            <input type="text" id="searchInput" placeholder="Поиск карт..." oninput="filterMaps()">
+            <input type="text" id="searchInput" placeholder="Search maps by name..." oninput="filterMaps()">
             <select id="sortSelect" onchange="loadMaps()">
-                <option value="newest">Сначала новые</option>
-                <option value="downloads">По скачиваниям</option>
-                <option value="likes">По лайкам</option>
+                <option value="newest">Newest First</option>
+                <option value="downloads">Most Downloaded</option>
+                <option value="likes">Most Liked</option>
             </select>
+            <!-- Modes will be loaded dynamically here -->
             <select id="modeSelect" onchange="loadMaps()">
-                <option value="all">Все режимы</option>
-                <option value="Sandbox">Sandbox</option>
-                <option value="Race">Race</option>
+                <option value="all">All Modes</option>
             </select>
         </div>
         <div class="nav-user">
             <div id="user-info" style="display: none;">
-                <span id="user-greeting">Привет, Игрок!</span>
-                <button class="btn btn-primary" onclick="openUploadModal()">Загрузить карту</button>
-                <button class="btn btn-danger" onclick="logout()">Выйти</button>
+                <span id="user-greeting">Hello, Player!</span>
+                <button class="btn btn-success" onclick="openUploadModal()"><i class="fa-solid fa-upload"></i> Upload Map</button>
+                <button class="btn btn-danger" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
             <div id="auth-buttons">
-                <button class="btn btn-outline" onclick="openAuthModal('login')">Вход</button>
-                <button class="btn btn-primary" onclick="openAuthModal('register')">Регистрация</button>
+                <button class="btn btn-outline" onclick="openAuthModal('login')">Login</button>
+                <button class="btn btn-primary" onclick="openAuthModal('register')">Register</button>
             </div>
         </div>
     </nav>
 
-    <!-- Секция Админа -->
+    <!-- Admin Panel -->
     <div id="admin-panel" class="admin-banner" style="display: none;">
-        <i class="fa-solid fa-crown"></i> Панель Администратора (Antropomeda) активирована. Вы можете удалять любые карты.
+        <i class="fa-solid fa-crown"></i> Administrator Panel Active. You have full moderation rights.
     </div>
 
-    <!-- Основной контент (Сетка карт) -->
+    <!-- Hero Banner (Makes the site look full and professional) -->
+    <header class="hero">
+        <div class="hero-content">
+            <h1>Welcome to the Custom Workshop</h1>
+            <p>Discover, download, and share amazing community-created maps and game modes.</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
     <main class="container">
         <div id="maps-grid" class="map-grid">
-            <!-- Карты будут загружаться сюда через JS -->
+            <!-- Maps will be loaded here -->
         </div>
-        <div id="loading-spinner" class="loading">Загрузка базы данных... <i class="fa-solid fa-spinner fa-spin"></i></div>
+        
+        <!-- Empty State (When search yields no results) -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <h3>No maps found</h3>
+            <p>Try changing your search terms or filters.</p>
+        </div>
+
+        <div id="loading-spinner" class="loading">Loading database... <i class="fa-solid fa-spinner fa-spin"></i></div>
     </main>
 
-    <!-- Модальное окно Входа/Регистрации -->
+    <!-- Auth Modal -->
     <div id="auth-modal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('auth-modal')">&times;</span>
-            <h2 id="auth-title">Вход</h2>
-            <input type="text" id="username" placeholder="Твой Никнейм (только для регистрации)" style="display: none;">
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Пароль">
-            <button id="auth-action-btn" class="btn btn-primary full-width" onclick="login()">Войти</button>
-            <p class="auth-switch" id="auth-switch-text" onclick="toggleAuthMode()">Нет аккаунта? Зарегистрироваться</p>
+            <h2 id="auth-title">Login</h2>
+            <input type="text" id="username" placeholder="Your Nickname (for registration only)" style="display: none;">
+            <input type="email" id="email" placeholder="Email Address">
+            <input type="password" id="password" placeholder="Password">
+            <button id="auth-action-btn" class="btn btn-primary full-width" onclick="login()">Login</button>
+            <p class="auth-switch" id="auth-switch-text" onclick="toggleAuthMode()">Don't have an account? Register</p>
         </div>
     </div>
 
-    <!-- Модальное окно Загрузки карты (Upload) -->
+    <!-- Upload Map Modal -->
     <div id="upload-modal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('upload-modal')">&times;</span>
-            <h2>Загрузить новую карту</h2>
-            <input type="text" id="map-name" placeholder="Название карты (без пробелов)">
-            <textarea id="map-desc" placeholder="Описание карты..."></textarea>
-            <select id="map-mode">
-                <option value="Sandbox">Sandbox</option>
-                <option value="Race">Race</option>
-            </select>
-            <label>Файл карты (.txt):</label>
+            <h2>Upload New Map</h2>
+            <input type="text" id="map-name" placeholder="Map Name (no spaces)">
+            <textarea id="map-desc" placeholder="Map Description..."></textarea>
+            
+            <label>Target Game Mode:</label>
+            <!-- Modes will be loaded dynamically here -->
+            <select id="map-mode"></select>
+            
+            <label>Map File (.txt):</label>
             <input type="file" id="map-file" accept=".txt">
-            <label>Превью (.png):</label>
+            
+            <label>Preview Image (.png / .jpg):</label>
             <input type="file" id="map-img" accept="image/png, image/jpeg">
-            <button id="upload-btn" class="btn btn-success full-width" onclick="uploadMap()">Опубликовать</button>
+            
+            <button id="upload-btn" class="btn btn-success full-width" onclick="uploadMap()">Publish Map</button>
         </div>
     </div>
 
-    <!-- Скрипты Firebase (Используем v8, добавляем Storage для файлов) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
