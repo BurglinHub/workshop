@@ -1,0 +1,27 @@
+body {
+    background-color: #121212; color: #ffffff;
+    font-family: Arial, sans-serif; text-align: center; padding: 20px;
+}
+.box {
+    background-color: #1e1e1e; border: 1px solid #333;
+    border-radius: 10px; padding: 20px; margin: 20px auto; max-width: 400px;
+}
+input {
+    width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none;
+}
+button {
+    padding: 10px 20px; margin: 5px; border: none; border-radius: 5px;
+    background-color: #007bff; color: white; cursor: pointer; font-weight: bold;
+}
+button:hover { background-color: #0056b3; }
+.btn-reg { background-color: #28a745; }
+.btn-reg:hover { background-color: #1e7e34; }
+.btn-logout { background-color: #dc3545; }
+.btn-logout:hover { background-color: #a71d2a; }
+
+.admin-box { background-color: #ffaa00; color: #000; max-width: 600px; }
+.mod-card { max-width: 600px; }
+.mod-card img {
+    width: 100%; max-width: 300px; cursor: pointer; border-radius: 10px; transition: 0.3s;
+}
+.mod-card img:hover { transform: scale(1.05); }

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Мастерская Модов</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Мастерская Модов 🎮</h1>
+
+    <!-- Меню Входа и Регистрации -->
+    <div id="auth-section" class="box">
+        <h2>Вход в систему</h2>
+        <input type="text" id="username" placeholder="Твой Никнейм (только для регистрации)">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Пароль">
+        <button onclick="login()">Войти</button>
+        <button onclick="register()" class="btn-reg">Регистрация</button>
+    </div>
+
+    <!-- Основной сайт (покажется только после входа) -->
+    <div id="main-content" style="display: none;">
+        <div class="user-panel box">
+            <h3 id="user-greeting">Привет!</h3>
+            <button onclick="logout()" class="btn-logout">Выйти</button>
+        </div>
+
+        <!-- Секретная панель Админа -->
+        <div id="admin-panel" class="box admin-box" style="display: none;">
+            <h3>👑 Панель Администратора (Antropomeda)</h3>
+            <p>У тебя есть права на управление базой (защита базы настроена, другие игроки ничего не удалят).</p>
+        </div>
+
+        <!-- Твой мод -->
+        <div class="mod-card box">
+            <img src="logo.png" alt="Логотип мода" onclick="toggleModMenu()">
+            <div id="mod-menu" style="display: none;">
+                <h3>Название твоего мода</h3>
+                <p>Автор: Antropomeda</p>
+                <button>Скачать мод</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрипты Firebase (Не трогать) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
