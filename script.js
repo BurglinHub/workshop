@@ -1,19 +1,16 @@
-// 1. ВСТАВЬ СВОЙ КОД ИЗ FIREBASE
+// 1. КОНФИГУРАЦИЯ FIREBASE (Storage удален)
 const firebaseConfig = {
     apiKey: "AIzaSyD6JQPUxDIgoKoYKRdlx20UAo7RjHQSzro",
     authDomain: "burhlin--gnomes-database.firebaseapp.com",
     projectId: "burhlin--gnomes-database",
-    storageBucket: "burhlin--gnomes-database.firebasestorage.app", // Storage теперь важен!
     messagingSenderId: "184546558617",
     appId: "1:184546558617:web:455f2a7a8d7215ec486e08",
     measurementId: "G-Q6QWS27Y1Z"
 };
 
-// Запуск Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 let currentUserData = null;
 let currentAuthMode = 'login';
@@ -48,8 +45,7 @@ async function register() {
         const cred = await auth.createUserWithEmailAndPassword(email, pass);
         await db.collection('users').doc(cred.user.uid).set({
             username: user,
-            role: (user === 'Antropomeda') ? 'admin' : 'player',
-            steamId: "" // Задел на будущее
+            role: (user === 'Antropomeda') ? 'admin' : 'player'
         });
         closeModal('auth-modal');
     } catch (err) { alert(err.message); }
@@ -86,10 +82,10 @@ auth.onAuthStateChanged(async (user) => {
         document.getElementById('user-info').style.display = 'none';
         document.getElementById('admin-panel').style.display = 'none';
     }
-    loadMaps(); // Перезагружаем карты, чтобы обновить кнопки Delete/Like
+    loadMaps();
 });
 
-// ================= База Данных Карт (Firestore) =================
+// ================= База Данных Карт =================
 async function loadMaps() {
     document.getElementById('loading-spinner').style.display = 'block';
     const grid = document.getElementById('maps-grid');
@@ -99,8 +95,6 @@ async function loadMaps() {
     const modeType = document.getElementById('modeSelect').value;
 
     let query = db.collection('maps');
-    
-    // Сортировка
     if (sortType === 'newest') query = query.orderBy('CreatedAt', 'desc');
     else if (sortType === 'downloads') query = query.orderBy('Downloads', 'desc');
     else if (sortType === 'likes') query = query.orderBy('Likes', 'desc');
@@ -117,11 +111,10 @@ async function loadMaps() {
         snapshot.forEach(doc => {
             const map = doc.data();
             map.id = doc.id;
-            // Фильтрация по режиму
             if (modeType !== 'all' && map.TargetMode !== modeType) return;
             grid.appendChild(createMapCard(map));
         });
-        filterMaps(); // Применяем текстовый поиск, если он введен
+        filterMaps();
     } catch (err) {
         console.error(err);
         document.getElementById('loading-spinner').innerText = "Ошибка загрузки базы данных.";
@@ -132,12 +125,9 @@ function createMapCard(map) {
     const div = document.createElement('div');
     div.className = 'map-card';
     
-    const imgUrl = map.PngUrl || 'https://via.placeholder.com/300x180?text=Нет+Изображения';
-    
-    // Права на удаление (Админ или Автор)
+    // Если картинки нет, ставим заглушку
+    const imgUrl = map.ImageBase64 || 'https://via.placeholder.com/300x180?text=Нет+Изображения';
     const canDelete = currentUserData && (currentUserData.role === 'admin' || currentUserData.username === map.Author);
-    
-    // Проверка лайка
     const likedPlayers = map.LikedPlayers || [];
     const hasLiked = currentUserData && likedPlayers.includes(currentUserData.uid);
     const likeColor = hasLiked ? 'var(--danger)' : 'white';
@@ -153,7 +143,7 @@ function createMapCard(map) {
                 <span><i class="fa-solid fa-download"></i> ${map.Downloads || 0}</span>
             </div>
             <div class="map-actions">
-                <button class="btn btn-primary" onclick="downloadMap('${map.id}', '${map.TxtUrl}')"><i class="fa-solid fa-download"></i> Скачать</button>
+                <button class="btn btn-primary" onclick="downloadMap('${map.id}', '${map.Name}')"><i class="fa-solid fa-download"></i> Скачать</button>
                 <button class="btn btn-outline" style="color:${likeColor}; border-color:${likeColor}" onclick="likeMap('${map.id}')">
                     <i class="fa-solid fa-heart"></i>
                 </button>
@@ -164,7 +154,6 @@ function createMapCard(map) {
     return div;
 }
 
-// ================= Функции Взаимодействия =================
 function filterMaps() {
     const search = document.getElementById('searchInput').value.toLowerCase();
     const cards = document.querySelectorAll('.map-card');
@@ -174,6 +163,33 @@ function filterMaps() {
     });
 }
 
+// ================= ФУНКЦИЯ СЖАТИЯ КАРТИНКИ =================
+// Сжимает картинку, чтобы она поместилась в бесплатный Firestore
+function resizeImageToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600; // Ужимаем до 600 пикселей (достаточно для карточки)
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                // Качество 0.7 (сильно снизит вес, но будет выглядеть нормально)
+                resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+            };
+        };
+        reader.onerror = error => reject(error);
+    });
+}
+
+// ================= ЗАГРУЗКА КАРТЫ (БЕЗ STORAGE) =================
 async function uploadMap() {
     if (!currentUserData) return alert("Нужно войти в систему!");
     
@@ -190,34 +206,31 @@ async function uploadMap() {
     btn.disabled = true;
 
     try {
-        // 1. Загрузка в Firebase Storage
-        const txtRef = storage.ref(`maps/${name}/${name}.txt`);
-        await txtRef.put(txtFile);
-        const txtUrl = await txtRef.getDownloadURL();
+        // Читаем TXT файл как обычный текст
+        const mapContent = await txtFile.text();
 
-        let pngUrl = "";
+        // Сжимаем картинку, если она есть
+        let imageBase64 = "";
         if (imgFile) {
-            const imgRef = storage.ref(`maps/${name}/${name}.png`);
-            await imgRef.put(imgFile);
-            pngUrl = await imgRef.getDownloadURL();
+            imageBase64 = await resizeImageToBase64(imgFile);
         }
 
-        // 2. Запись в Firestore
+        // Сохраняем всё как ТЕКСТ прямо в Firestore
         await db.collection('maps').doc(name).set({
             Name: name,
             Description: desc,
             Author: currentUserData.username,
             TargetMode: mode,
             Version: "1.0.0",
-            TxtUrl: txtUrl,
-            PngUrl: pngUrl,
+            MapDataContent: mapContent, // Храним код карты тут
+            ImageBase64: imageBase64,   // Храним картинку тут
             Likes: 0,
             Downloads: 0,
             LikedPlayers: [],
             CreatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        alert("Карта успешно загружена!");
+        alert("Карта успешно опубликована!");
         closeModal('upload-modal');
         loadMaps();
     } catch (err) {
@@ -229,14 +242,36 @@ async function uploadMap() {
     }
 }
 
-async function downloadMap(mapId, url) {
-    if(!url) return alert("Файл не найден!");
-    window.open(url, '_blank');
-    // Увеличиваем счетчик скачиваний
-    await db.collection('maps').doc(mapId).update({
-        Downloads: firebase.firestore.FieldValue.increment(1)
-    });
-    loadMaps();
+// ================= СКАЧИВАНИЕ КАРТЫ (СБОРКА НА ЛЕТУ) =================
+async function downloadMap(mapId, mapName) {
+    try {
+        // Получаем документ из базы
+        const doc = await db.collection('maps').doc(mapId).get();
+        if (!doc.exists) return alert("Карта удалена!");
+
+        const mapData = doc.data().MapDataContent;
+        if (!mapData) return alert("Файл карты пуст!");
+
+        // Создаем текстовый файл в памяти браузера
+        const blob = new Blob([mapData], { type: "text/plain" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = mapName + ".txt"; // Имя для сохранения
+        
+        // Автоматически нажимаем на скрытую ссылку
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Увеличиваем счетчик
+        await db.collection('maps').doc(mapId).update({
+            Downloads: firebase.firestore.FieldValue.increment(1)
+        });
+        loadMaps();
+
+    } catch(e) {
+        alert("Ошибка скачивания: " + e.message);
+    }
 }
 
 async function likeMap(mapId) {
@@ -247,11 +282,9 @@ async function likeMap(mapId) {
     let likedPlayers = doc.data().LikedPlayers || [];
     
     if (likedPlayers.includes(currentUserData.uid)) {
-        // Убираем лайк
         likedPlayers = likedPlayers.filter(id => id !== currentUserData.uid);
         await mapRef.update({ Likes: firebase.firestore.FieldValue.increment(-1), LikedPlayers: likedPlayers });
     } else {
-        // Ставим лайк
         likedPlayers.push(currentUserData.uid);
         await mapRef.update({ Likes: firebase.firestore.FieldValue.increment(1), LikedPlayers: likedPlayers });
     }
