@@ -41,7 +41,14 @@
 
     <!-- Admin Panel -->
     <div id="admin-panel" class="admin-banner" style="display: none;">
-        <i class="fa-solid fa-crown"></i> Administrator Panel Active. You have full moderation rights.
+        <div><i class="fa-solid fa-crown"></i> <b>Administrator Panel Active.</b> You have full moderation rights.</div>
+        
+        <!-- Управление режимами -->
+        <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px; align-items: center;">
+            <input type="text" id="new-mode-input" placeholder="New Game Mode Name" style="padding: 5px; border-radius: 3px; border: none;">
+            <button class="btn btn-success" style="padding: 5px 15px;" onclick="addGameMode()">Add Mode</button>
+            <button class="btn btn-danger" style="padding: 5px 15px;" onclick="removeGameMode()">Remove Mode</button>
+        </div>
     </div>
 
     <!-- Hero Banner (Makes the site look full and professional) -->
