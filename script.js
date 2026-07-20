@@ -337,3 +337,38 @@ async function deleteMap(mapId) {
 loadGameModes().then(() => {
     loadMaps();
 });
+// ================= УПРАВЛЕНИЕ РЕЖИМАМИ (ДЛЯ АДМИНА) =================
+async function addGameMode() {
+    const newMode = document.getElementById('new-mode-input').value.trim();
+    if (!newMode) return alert("Enter a mode name!");
+    if (dynamicModes.includes(newMode)) return alert("This mode already exists!");
+
+    try {
+        dynamicModes.push(newMode);
+        await db.collection('settings').doc('modes').set({ modeList: dynamicModes });
+        alert(`Mode '${newMode}' added successfully!`);
+        document.getElementById('new-mode-input').value = '';
+        loadGameModes(); // Обновляем выпадающие списки
+    } catch (err) {
+        alert("Error adding mode: " + err.message);
+    }
+}
+
+async function removeGameMode() {
+    const modeToRemove = document.getElementById('new-mode-input').value.trim();
+    if (!modeToRemove) return alert("Enter a mode name to remove!");
+    if (!dynamicModes.includes(modeToRemove)) return alert("Mode not found!");
+    if (modeToRemove === 'Sandbox') return alert("Cannot remove the default Sandbox mode!");
+
+    if (confirm(`Are you sure you want to remove '${modeToRemove}'? Users won't be able to upload maps for it.`)) {
+        try {
+            dynamicModes = dynamicModes.filter(m => m !== modeToRemove);
+            await db.collection('settings').doc('modes').set({ modeList: dynamicModes });
+            alert(`Mode '${modeToRemove}' removed!`);
+            document.getElementById('new-mode-input').value = '';
+            loadGameModes(); // Обновляем выпадающие списки
+        } catch (err) {
+            alert("Error removing mode: " + err.message);
+        }
+    }
+}
