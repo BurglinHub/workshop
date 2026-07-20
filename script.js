@@ -13,35 +13,43 @@ const db = firebase.firestore();
 
 let currentUserData = null;
 let currentAuthMode = 'login';
-let dynamicModes = ['Sandbox', 'Race']; // Дефолтные режимы
 
-// ================= DYNAMIC MODES (API) =================
-// Читаем список режимов из базы. Твой мод сможет добавлять сюда новые!
-async function loadGameModes() {
-    try {
-        const doc = await db.collection('settings').doc('modes').get();
-        if (doc.exists && doc.data().modeList) {
-            dynamicModes = doc.data().modeList;
+// ================= УСТРАНЕНИЕ СЛЕТА АККАУНТА ПРИ F5 =================
+// Устанавливаем принудительное сохранение сессии браузера перед тем, как ловить статус.
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+    
+    // Как только Firebase понимает, авторизован ли игрок, он обновляет интерфейс
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            try {
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (doc.exists) {
+                    currentUserData = doc.data();
+                    currentUserData.uid = user.uid;
+                } else {
+                    currentUserData = { username: user.email.split('@')[0], role: 'player', uid: user.uid };
+                }
+                
+                document.getElementById('auth-buttons').style.display = 'none';
+                document.getElementById('user-info').style.display = 'flex';
+                document.getElementById('user-greeting').innerText = `Hello, ${currentUserData.username}!`;
+                
+            } catch (e) { console.error("Error fetching user data:", e); }
         } else {
-            // Если документа нет, создаем его с дефолтными значениями
-            await db.collection('settings').doc('modes').set({ modeList: dynamicModes });
+            currentUserData = null;
+            // Показываем кнопки логина только если 100% нет пользователя
+            document.getElementById('auth-buttons').style.display = 'flex';
+            document.getElementById('user-info').style.display = 'none';
         }
         
-        const filterSelect = document.getElementById('modeSelect');
-        const uploadSelect = document.getElementById('map-mode');
-        
-        // Очищаем и заполняем
-        filterSelect.innerHTML = '<option value="all">All Modes</option>';
-        uploadSelect.innerHTML = '';
-        
-        dynamicModes.forEach(mode => {
-            filterSelect.innerHTML += `<option value="${mode}">${mode}</option>`;
-            uploadSelect.innerHTML += `<option value="${mode}">${mode}</option>`;
-        });
-    } catch (err) {
-        console.error("Failed to load game modes:", err);
-    }
-}
+        // Загружаем карты ОДИН РАЗ, когда auth загрузился
+        loadMaps();
+    });
+
+}).catch((error) => {
+    console.error("Auth persistence error:", error);
+    loadMaps(); // Фолбэк на случай блокировки куки
+});
 
 // ================= UI & MODALS =================
 function openAuthModal(mode) {
@@ -68,10 +76,9 @@ async function register() {
 
     try {
         const cred = await auth.createUserWithEmailAndPassword(email, pass);
-        // Записываем данные в Firestore
         await db.collection('users').doc(cred.user.uid).set({
             username: user,
-            role: 'player' // Защита на сервере не даст поставить admin
+            role: 'player'
         });
         closeModal('auth-modal');
     } catch (err) { alert("Registration Error: " + err.message); }
@@ -87,36 +94,6 @@ async function login() {
 }
 
 function logout() { auth.signOut(); }
-
-// ИСПРАВЛЕННЫЙ БАГ ИНТЕРФЕЙСА
-auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        try {
-            const doc = await db.collection('users').doc(user.uid).get();
-            if (doc.exists) {
-                currentUserData = doc.data();
-                currentUserData.uid = user.uid;
-            } else {
-                // Если произошел сбой и документа нет, создаем "заглушку"
-                currentUserData = { username: user.email.split('@')[0], role: 'player', uid: user.uid };
-            }
-            
-            document.getElementById('auth-buttons').style.display = 'none';
-            document.getElementById('user-info').style.display = 'flex';
-            document.getElementById('user-greeting').innerText = `Hello, ${currentUserData.username}!`;
-            
-            if (currentUserData.role === 'admin') {
-                document.getElementById('admin-panel').style.display = 'block';
-            }
-        } catch (e) { console.error("Error fetching user data:", e); }
-    } else {
-        currentUserData = null;
-        document.getElementById('auth-buttons').style.display = 'flex';
-        document.getElementById('user-info').style.display = 'none';
-        document.getElementById('admin-panel').style.display = 'none';
-    }
-    loadMaps();
-});
 
 // ================= MAP DATABASE =================
 function escapeHTML(str) {
@@ -330,45 +307,5 @@ async function deleteMap(mapId) {
     if(confirm("Are you sure you want to delete this map?")) {
         await db.collection('maps').doc(mapId).delete();
         loadMaps();
-    }
-}
-
-// Загружаем режимы перед загрузкой карт
-loadGameModes().then(() => {
-    loadMaps();
-});
-// ================= УПРАВЛЕНИЕ РЕЖИМАМИ (ДЛЯ АДМИНА) =================
-async function addGameMode() {
-    const newMode = document.getElementById('new-mode-input').value.trim();
-    if (!newMode) return alert("Enter a mode name!");
-    if (dynamicModes.includes(newMode)) return alert("This mode already exists!");
-
-    try {
-        dynamicModes.push(newMode);
-        await db.collection('settings').doc('modes').set({ modeList: dynamicModes });
-        alert(`Mode '${newMode}' added successfully!`);
-        document.getElementById('new-mode-input').value = '';
-        loadGameModes(); // Обновляем выпадающие списки
-    } catch (err) {
-        alert("Error adding mode: " + err.message);
-    }
-}
-
-async function removeGameMode() {
-    const modeToRemove = document.getElementById('new-mode-input').value.trim();
-    if (!modeToRemove) return alert("Enter a mode name to remove!");
-    if (!dynamicModes.includes(modeToRemove)) return alert("Mode not found!");
-    if (modeToRemove === 'Sandbox') return alert("Cannot remove the default Sandbox mode!");
-
-    if (confirm(`Are you sure you want to remove '${modeToRemove}'? Users won't be able to upload maps for it.`)) {
-        try {
-            dynamicModes = dynamicModes.filter(m => m !== modeToRemove);
-            await db.collection('settings').doc('modes').set({ modeList: dynamicModes });
-            alert(`Mode '${modeToRemove}' removed!`);
-            document.getElementById('new-mode-input').value = '';
-            loadGameModes(); // Обновляем выпадающие списки
-        } catch (err) {
-            alert("Error removing mode: " + err.message);
-        }
     }
 }
